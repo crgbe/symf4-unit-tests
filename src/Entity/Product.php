@@ -23,6 +23,10 @@ class Product
 
     public function computeTVA()
     {
+        if($this->price < 0){
+            throw new \LogicException('The product price can not be negative');
+        }
+
         if (self::FOOD_PRODUCT == $this->type) {
             return $this->price * 0.055;
         }
