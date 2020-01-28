@@ -20,20 +20,20 @@ class ProductTest extends TestCase
         $this->assertSame($expectedTVA, $product->computeTVA());
     }
 
-//    public function testComputeTVAOtherProduct(){
-//        $product = new Product('Product', 'others', 10);
-//        $result = $product->computeTVA();
-//
-//        $this->assertSame(1.96, $result);
-//    }
-//
-//    public function testComputeTVANotNegative(){
-//        $product = new Product('Product', 'any-food', -12);
-//
-//        $this->expectException('LogicException');
-//
-//        $product->computeTVA();
-//    }
+    public function testComputeTVAOtherProduct(){
+        $product = new Product('Product', 'others', 10);
+        $result = $product->computeTVA();
+
+        $this->assertSame(1.96, $result);
+    }
+
+    public function testComputeTVANotNegative(){
+        $product = new Product('Product', 'any-food', -12);
+
+        $this->expectException('LogicException');
+
+        $product->computeTVA();
+    }
 
     public function getPricesAndExpectedProductTVAForFood(){
         return [
