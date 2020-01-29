@@ -10,8 +10,15 @@ use PHPUnit\Framework\TestCase;
 
 class GitHubUserProviderTest extends TestCase
 {
-    public function testLoadUserByUserNameReturningUser(){
-        $userData = [
+    private $client;
+    private $serializer;
+    private $responseInterface;
+    private $streamedInterface;
+    private $userData;
+
+    public function setUp()
+    {
+        $this->userData = [
             'login' => 'user_login',
             'name' => 'username',
             'email' => 'user_email',
@@ -19,41 +26,112 @@ class GitHubUserProviderTest extends TestCase
             'html_url' => 'user_html_url',
         ];
 
-        $client = $this
+        $this->client = $this
             ->getMockBuilder('GuzzleHttp\Client')
             ->setMethods(['get'])
             ->disableOriginalConstructor()
             ->getMock()
         ;
 
-        $serialiser = $this
+        $this->serializer =$this
             ->getMockBuilder('JMS\Serializer\Serializer')
             ->setMethods(['deserialize'])
             ->disableOriginalConstructor()
             ->getMock()
         ;
 
-        //Returned response from get method of GuzzleHttp\Client class
-        $response = $this
+        $this->responseInterface = $this
             ->getMockBuilder('Psr\Http\Message\ResponseInterface')
             ->getMock()
         ;
 
-        $client->method('get')->willReturn($response);
-
-        $streamedReponse = $this
+        $this->streamedInterface = $this
             ->getMockBuilder('Psr\Http\Message\StreamInterface')
             ->getMock()
         ;
+    }
 
-        $response->method('getBody')->willReturn($streamedReponse);
-        $streamedReponse->method('getContents')->willReturn('');
+    public function tearDown()
+    {
+        $this->client = null;
+        $this->serializer = null;
+        $this->responseInterface = null;
+        $this->streamedInterface = null;
+        $this->userData = null;
+    }
 
-        $serialiser->method('deserialize')->willReturn($userData);
+    public function testLoadUserByUsernameReturningUser(){
+        $this->client
+            ->expects($this->once())
+            ->method('get')
+            ->willReturn($this->responseInterface)
+        ;
 
-        $gitHubUserProvider = new GithubUserProvider($client, $serialiser);
+        $this->responseInterface
+            ->expects($this->once())
+            ->method('getBody')
+            ->willReturn($this->streamedInterface)
+        ;
+
+        $this->streamedInterface
+            ->expects($this->once())
+            ->method('getContents')
+            ->willReturn('')
+        ;
+
+        $this->serializer
+            ->expects($this->once())
+            ->method('deserialize')
+            ->willReturn($this->userData)
+        ;
+
+        $gitHubUserProvider = new GithubUserProvider($this->client, $this->serializer);
         $user = $gitHubUserProvider->loadUserByUsername('user-token-access');
 
-        $this->assertInstanceOf(User::class, $user);
+        $expectedUser = new User(
+            $this->userData['login'],
+            $this->userData['name'],
+            $this->userData['email'],
+            $this->userData['avatar_url'],
+            $this->userData['html_url']
+        );
+
+        $this->assertEquals($expectedUser, $user);
+        $this->assertEquals('App\Entity\User', get_class($user));
+//        $this->assertInstanceOf(User::class, $user);
+    }
+
+    public function testLoadUserByUsernameThrowingLogicalException(){
+        $this->client
+            ->expects($this->once())
+            ->method('get')
+            ->willReturn($this->responseInterface)
+        ;
+
+        $this->responseInterface
+            ->expects($this->once())
+            ->method('getBody')
+            ->willReturn($this->streamedInterface)
+        ;
+
+
+        $this->streamedInterface
+            ->expects($this->once())
+            ->method('getContents')
+            ->willReturn('')
+        ;
+
+        $this->serializer
+            ->expects($this->once())
+            ->method('deserialize')
+            ->willReturn([])
+        ;
+
+
+        $this->expectException('LogicException');
+
+
+        $githubUserProvider = new GithubUserProvider($this->client, $this->serializer);
+        $githubUserProvider->loadUserByUsername('user-access-token');
     }
 }
